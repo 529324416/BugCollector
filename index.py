@@ -9,12 +9,13 @@ import os
 import atexit
 import _cookies
 
-_mongo_client = GDTMongoClient("mongodb://localhost:27017/")
-
+# create base helpers
 _logger = GDTLogger("./server_logs")
+_mongo_client = GDTMongoClient("mongodb://localhost:27017/")
 _netload_recorder = NetLoadRecorder(_logger, _mongo_client.get_database("doloctown"))
 _doloctown_api = GDTMongoHandleBase(_mongo_client.get_database("doloctown"))
 
+# create flask app
 app = Flask(__name__)
 _bug_collector = BugCollector_Exception(_doloctown_api, _netload_recorder, import_name=__name__)
 app.register_blueprint(_bug_collector)
@@ -96,7 +97,6 @@ if os.getenv('WERKZEUG_RUN_MAIN') == 'true':
 
 def main_debug():
     app.run(debug=True)
-
 
 def main_env(host="0.0.0.0", port=80):
     '''use gevent to run the server'''

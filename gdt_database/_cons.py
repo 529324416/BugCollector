@@ -51,3 +51,4 @@ class GDTFields:
     DATA_PLAN_ID = "__tpid"
     DATA_DATE = "__date"
     DATA_TIMESTAMP = "__timestamp"
+    DATA_COUNT = "__count"

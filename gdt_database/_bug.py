@@ -67,7 +67,8 @@ class GDTBugUtils:
             "date":"",
             "plan_id":"",
             "device_info":"",
-            "handled":False/True
+            "handled":False/True,
+            "count":0
         }
         '''
 
@@ -95,7 +96,8 @@ class GDTBugUtils:
             "date": _date,
             "plan_id": _plan_id,
             "device_info": _device_info,
-            "handled": origin_data.get(GDTFields.BUG_REPORT_HANDLED)
+            "handled": origin_data.get(GDTFields.BUG_REPORT_HANDLED, False),
+            "count": origin_data.get(GDTFields.DATA_COUNT, 1)
         }
 
 

@@ -147,6 +147,7 @@ class BugCollector_Exception(Blueprint):
 
         _data.setdefault(GDTFields.DATA_DATE, date_yymmdd())
         _data.setdefault(GDTFields.DATA_PLAN_ID, self.__dataapi.current_plan)
+        _data.setdefault(GDTFields.DATA_COUNT, 1)
         _data.setdefault(GDTBugUtils.KEY_HANDLED, False)
 
         _triggers = _data.get(GDTBugUtils.KEY_TRIGGER_POINTS, [])

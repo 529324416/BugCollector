@@ -1,0 +1,96 @@
+{% if count == 0 %}
+<div class="p-4 w-full max-w-full h-full max-h-full">
+    <div class=" hero bg-base-200 max-h-full max-w-full h-full w-full rounded-2xl">
+        
+        <div class="hero-content text-center">
+            <div class="max-w-md">
+                <h1 class="text-4xl font-bold">暂无记录</h1>
+                <p class="py-6 text-neutral-content">
+                    同一触发位置的异常只会被记录一次
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% else %}
+
+<div class="w-full max-w-full">
+    <div class="flex flex-col max-w-full w-full gap-y-4 p-6">
+
+        <div class="flex flex-row gap-x-4">
+
+            <div class="stats stats-horizontal shadow-md bg-base-200 w-1/4 min-w-fit max-h-32">
+                <div class="stat w-full">
+                    <div class="stat-title">{{ title }}</div>
+                    <div class="stat-value">{{ count }}</div>
+                    <div class="stat-desc">{{ date }}</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 表格部分 -->
+        <div class="bg-base-200 rounded-2xl shadow-lg p-4 w-full min-w-full">
+            <!-- <label class="input input-sm input-bordered flex items-center m-2 w-1/4">
+                <input type="text" class="grow" placeholder="查找异常头" />
+                <a href="#">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" class="h-4 w-4 opacity-70">
+                        <path fill-rule="evenodd"
+                            d="M9.965 11.026a5 5 0 1 1 1.06-1.06l2.755 2.754a.75.75 0 1 1-1.06 1.06l-2.755-2.754ZM10.5 7a3.5 3.5 0 1 1-7 0 3.5 3.5 0 0 1 7 0Z"
+                            clip-rule="evenodd" />
+                    </svg>
+                </a>
+            </label> -->
+            <table class="table table-xs lg:table-sm">
+
+                <!-- 表格头部 -->
+                <thead>
+                    <tr>
+                        <th class="max-w-8 w-8"></th>
+                        <th class="max-w-56 w-56">异常信息</th>
+                        <th class="flex-grow">触发位置</th>
+                        <th class="w-32">上传日期</th>
+                        <th class="max-w-56 w-56">运行设备</th>
+                        <th class="w-24">运行日志</th>
+                        <th class="w-12">已处理</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for ex in exceptions %}
+                    <tr>
+                        <th class="max-w-8 w-8">{{ current_page * page_size + loop.index }}</th>
+                        <td class="max-w-56 w-56 truncate">{{ ex['except_info'] }}</td>
+                        <td class="flex-grow text-left tooltip tooltip-bottom" data-tip="{{ ex['except_pos'] }}">{{ ex['except_pos'] }}</td>
+                        <td class="w-32 truncate ">{{ ex['date'] }}/{{ ex['test_plan'] }}</td>
+                        <td class="max-w-56 w-56 truncate ">{{ ex['device_info']}}</td>
+                        <td class="w-12"><a target="_blank" href="/doloctown/bug/exception/details/{{ ex['id'] }}" class="btn btn-ghost btn-xs">查看</a></td>
+
+                        {% if ex['handled'] %}
+                        <td class="w-12"><a><input type="checkbox" checked="check" class="checkbox-xs checkbox" onchange="bug_exception_update_handle_status('/doloctown/bug/exception/update/handle_status', '{{ ex['id'] }}', false)" /></a></td>
+                        {% else %}
+                        <td class="w-12"><a><input type="checkbox" class="checkbox-xs checkbox" 
+                            onchange='bug_exception_update_handle_status("/doloctown/bug/exception/update/handle_status", "{{ ex['id'] }}", true)' /></a></td>
+                        {% endif %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% if pages|length > 1 %}
+
+            <div class="flex flex-row w-full min-w-full justify-center items-center">
+                <div class="join">
+                    {% for link in page_links %}
+                        {% if link == "" %}
+                        <button class="join-item btn btn-active">{{ pages[loop.index0] }}</button>
+                        {% else %}
+                        <button class="join-item btn" onclick="load_main('{{ link }}')">{{ pages[loop.index0] }}</button>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+
+        {% endif %}
+    </div>
+</div>
+{% endif %}

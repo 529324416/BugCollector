@@ -1,0 +1,39 @@
+<div class="p-10 flex flex-col gap-4 w-full">
+    <div class="stats stats-horizontal shadow-md bg-base-200 w-full">
+        <div class="stat">
+            <div class="stat-title">总访问次数</div>
+            <div class="stat-value">{{ total_count }}</div>
+            {% if total_count_err > 0 %}
+                <div class="stat-desc">↗︎ {{ total_count_err }}</div>
+            {% else %}
+                <div class="stat-desc">↘︎ {{ total_count_err }}</div>
+            {% endif %}
+        </div>
+    
+        <div class="stat">
+            <div class="stat-title">日均访问次数</div>
+            <div class="stat-value">{{ average_count }}</div>
+            {% if average_count_err > 0 %}
+                <div class="stat-desc">↗︎ {{ average_count_err }}</div>
+            {% else %}
+                <div class="stat-desc">↘︎ {{ average_count_err }}</div>
+            {% endif %}
+        </div>
+    
+        <div class="stat">
+            <div class="stat-title">最近一周总访问次数</div>
+            <div class="stat-value">{{ recent_total_count }}</div>
+            {% if recent_total_count_err > 0 %}
+                <div class="stat-desc">↗︎ {{ recent_total_count_err }}</div>
+            {% else %}
+                <div class="stat-desc">↘︎ {{ recent_total_count_err }}</div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="flex flex-row max-h-full min-w-full justify-center items-center top-10">
+        <div class="bg-base-200 p-10 shadow-md w-full min-w-full" style="border-radius: 30px;">
+            <div id="chart" style="width: 100%;height:500px;"></div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,7 @@
+<p class="text-neutral-content font-bold text-lg">多洛可小镇</p>
+{% if current_plan == "" %}
+    <p class="text-error">当前没有设置测试计划</p>
+    <p class="text-base italic">(没有设置测试计划时所有数据一律不会入库，请尽快设置测试计划！)</p>
+{% else %}
+    <p class="text-base italic">当前测试计划 {{ current_plan }}</p>
+{% endif %}

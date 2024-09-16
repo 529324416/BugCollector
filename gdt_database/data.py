@@ -448,13 +448,11 @@ class NetLoadRecorder:
         self.__total_visit_times = 1
         self.__date = _current_date
 
-    def dispose(self):
+    def flush(self):
         '''退出时记录当前的数据'''
 
-        print("dispose: ", self.__date, self.__total_visit_times)
         self._upload(self.__date, self.__total_visit_times)
         self._upload_result()
-
 
 
 if __name__ == '__main__':

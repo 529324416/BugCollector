@@ -88,12 +88,6 @@ def set_theme(theme):
     '''Set the theme of the website.'''
     
     return _theme.set_theme(theme)
-    
-
-# 退出时将现有负载数据上传至数据库
-if os.getenv('WERKZEUG_RUN_MAIN') == 'true':
-    atexit.register(_netload_recorder.dispose)
-
 
 def main_debug():
     app.run(debug=True)

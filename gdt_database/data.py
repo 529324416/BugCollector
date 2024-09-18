@@ -238,7 +238,7 @@ class GDTMongoHandleBase:
         # update count and return
         _id = result[GDTFields._SPEC_MONGODB_ID]
         _count = result.get(GDTFields.DATA_COUNT, 1) + 1
-        collection.update_one({GDTFields._SPEC_MONGODB_ID: _id}, {"$set": {GDTFields.DATA_COUNT: _count}})
+        collection.update_one({GDTFields._SPEC_MONGODB_ID: _id}, {"$set": {GDTFields.DATA_COUNT: _count, GDTFields.BUG_REPORT_HANDLED: False}})
         return True
 
     def insert_bug_exception(self, data) -> bool:

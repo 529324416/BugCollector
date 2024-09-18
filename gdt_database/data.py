@@ -231,7 +231,7 @@ class GDTMongoHandleBase:
         '''检查异常是否存在'''
 
         collection = self.__database.get_collection(GDTCollections.TABLE_BUG_REPORT_EXCEPTION)
-        result = collection.find_one({})
+        result = collection.find_one(query)
         if result is None:
             return False
         

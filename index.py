@@ -11,7 +11,7 @@ import _cookies
 
 # create base helpers
 _logger = GDTLogger("./server_logs")
-_mongo_client = GDTMongoClient("mongodb://admin:rs_locktown_1018@109.244.159.206:28814/")
+_mongo_client = GDTMongoClient("mongodb://127.0.0.1:27017/")
 _netload_recorder = NetLoadRecorder(_logger, _mongo_client.get_database("doloctown"))
 _doloctown_api = GDTMongoHandleBase(_mongo_client.get_database("doloctown"))
 

@@ -68,7 +68,6 @@ class GDTBugUtils:
             "except_pos":"",
             "date":"",
             "plan_id":"",
-            "device_info":"",
             "version":"",
             "handled":False/True,
             "count":0
@@ -89,16 +88,15 @@ class GDTBugUtils:
 
         _date = origin_data.get(GDTFields.DATA_DATE)
         _plan_id = origin_data.get(GDTFields.DATA_PLAN_ID)
-        _device = origin_data.get(GDTBugUtils.KEY_DEVICE)
-
-        _device_info = "{}({})".format(_device.get(GDTBugUtils.KEY_DVC_TYPE), _device.get(GDTBugUtils.KEY_OS))
+        # _device = origin_data.get(GDTBugUtils.KEY_DEVICE)
+        # _device_info = "{}({})".format(_device.get(GDTBugUtils.KEY_DVC_TYPE), _device.get(GDTBugUtils.KEY_OS))
         return {
             "id": _id,
             "except_info": _except_info,
             "except_pos": _except_pos,
             "date": _date,
             "plan_id": _plan_id,
-            "device_info": _device_info,
+            # "device_info": _device_info,
             "version": origin_data.get(GDTBugUtils.KEY_VERSION, "unknown"),
             "handled": origin_data.get(GDTFields.BUG_REPORT_HANDLED, False),
             "count": origin_data.get(GDTFields.DATA_COUNT, 1)

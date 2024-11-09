@@ -138,23 +138,22 @@ class BugCollector_Exception(Blueprint):
         if request.method != 'POST':
             return jsonify({"status": "error", "message": f"unsupported method '{request.method}' "})
         
+        # 当前系统没有设立测试计划时，不予接受所有数据传输
         if self.__dataapi.current_plan is None:
             return jsonify({"status": "error", "message": "test plan is unset"})
         
+        # 读取并验证数据是否有效
         _data = request.get_json()
         if _data is None or not GDTBugUtils.validate_bug_exception(_data):
             return jsonify({"status": "error", "message": "invalid post data"})
 
-        _data.setdefault(GDTFields.DATA_DATE, date_yymmdd())
-        _data.setdefault(GDTFields.DATA_PLAN_ID, self.__dataapi.current_plan)
-        _data.setdefault(GDTFields.DATA_COUNT, 1)
-        _data.setdefault(GDTBugUtils.KEY_HANDLED, False)
-
+        # 检查是否已经存在相同的异常报告(根据出发点的位置来进行判断)
         _triggers = _data.get(GDTBugUtils.KEY_TRIGGER_POINTS, [])
         if len(_triggers) == 0:
             # 没有触发点时，视为无效数据
             return jsonify({"status": "error", "message": "invalid data"})
         else:
+            # 有触发点时，检查是否已经存在相同的异常报告
             _final_trigger_position = _data.get(GDTBugUtils.KEY_FINAL_TRIGGER_POINT, {})
             _query = {
                 GDTBugUtils.KEY_NAME: _data.get(GDTBugUtils.KEY_NAME, ""),
@@ -162,10 +161,19 @@ class BugCollector_Exception(Blueprint):
                 GDTBugUtils.KEY_FINAL_TRIGGER_POINT: _final_trigger_position,
                 GDTFields.DATA_PLAN_ID: self.__dataapi.current_plan,
             }
-            if self.__dataapi.bug_exception_exists(_query):
+            if self.__dataapi.is_data_exists(_query):
+                self.__dataapi.increment_data_count(_query)
                 return jsonify({"status": "error", "message": "data already exists"})
 
-        if self.__dataapi.insert_bug_exception(_data):
+        # 为本次上传附加时间信息等默认数据
+        _data.setdefault(GDTFields.DATA_DATE, date_yymmdd())
+        _data.setdefault(GDTFields.DATA_TIMESTAMP, timestamp())
+        _data.setdefault(GDTFields.DATA_PLAN_ID, self.__dataapi.current_plan)
+        _data.setdefault(GDTFields.DATA_COUNT, 1)
+        _data.setdefault(GDTBugUtils.KEY_HANDLED, False)
+
+        # 插入数据
+        if self.__dataapi.insert_data(_data):
             return jsonify({"status": "ok", "message": "upload success"})
         return jsonify({"status": "error", "message": "insert data failed, database error"})
 
@@ -180,11 +188,11 @@ class BugCollector_Exception(Blueprint):
         if _handled is None:
             # 返回所有异常
 
-            _all_exceptions = self.__dataapi.get_bug_exceptions()
+            _all_exceptions = self.__dataapi.get_datas()
             return render_template("doloctown/exception.html", count=len(_all_exceptions), date=date_yymmdd_prettry(), exceptions=_all_exceptions)
         
         _query = {GDTFields.BUG_REPORT_HANDLED: _handled.lower() == "true"}
-        _handled_exceptions = self.__dataapi.get_bug_exceptions(_query)
+        _handled_exceptions = self.__dataapi.get_datas(_query)
         return render_template("doloctown/exception.html", count=len(_handled_exceptions), date=date_yymmdd_prettry(), exceptions=_handled_exceptions)
     
     def _set_last_bug_exception_menu(self):
@@ -222,11 +230,11 @@ class BugCollector_Exception(Blueprint):
             _title = ("已处理" if _handled == "true" else "未处理") + "异常总数"
             _postfix = "?handled=" + _handled
 
-        total_count = self.__dataapi.bug_exception_count(_query)
-        _filtered_exceptions = self.__dataapi.get_bug_exceptions_as_page(_page, _page_size, _query)
+        total_count = self.__dataapi.get_data_count(_query)
+        _filtered_exceptions = self.__dataapi.get_datas_at_page(_page, _page_size, _query)
 
         _current_page = _page + 1
-        _pages = handle_pages(total_count, _page_size, _current_page)
+        _pages = handle_pages(total_count, _page_size, _current_page, page_range=5)
         _page_links = handle_pages_as_url("doloctown/bug/exception", _pages, _current_page, postfix=_postfix)
         return render_template("doloctown/exception.html", 
                                count=total_count, 
@@ -257,7 +265,7 @@ class BugCollector_Exception(Blueprint):
             print("请求数据无效")
             return jsonify({"status": "error", "message": "请求数据无效"})
         
-        if self.__dataapi.update_bug_exception_handle_status(_id, _handled):
+        if self.__dataapi.update_handle_status(_id, _handled):
             print("更新成功")
             return jsonify({"status": "ok", "message": "更新成功"})
         
@@ -271,7 +279,7 @@ class BugCollector_Exception(Blueprint):
         if request.method != 'GET':
             return jsonify({"status": "error", "message": "请求方法错误"})
         
-        _exception = self.__dataapi.get_bug_exception(Id)
+        _exception = self.__dataapi.get_data(Id)
         if _exception is None:
             return not_found(f"未找到异常报告:{Id}")
         

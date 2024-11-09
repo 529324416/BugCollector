@@ -50,5 +50,6 @@ class GDTFields:
     DATA_CLIENT_DATA = "client_data"
     DATA_PLAN_ID = "__tpid"
     DATA_DATE = "__date"
+    DATA_DATE_NUM = "__date_num"
     DATA_TIMESTAMP = "__timestamp"
     DATA_COUNT = "__count"

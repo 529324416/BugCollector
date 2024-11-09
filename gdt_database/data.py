@@ -168,7 +168,7 @@ class GDTMongoHandleBase:
             return (True, "test plan created successfully")
         return (False, "test plan created failed due to unknown reason")
     
-    def bug_exception_count(self, query:dict={}) -> int:
+    def get_data_count(self, query:dict={}) -> int:
         '''获取异常总数量'''
 
         collection = self.__database.get_collection(GDTCollections.TABLE_BUG_REPORT_EXCEPTION)
@@ -195,7 +195,7 @@ class GDTMongoHandleBase:
         _count = result.get(GDTFields.DATA_COUNT, 1) + 1
         collection.update_one({GDTFields._SPEC_MONGODB_ID: _id}, {"$set": {GDTFields.DATA_COUNT: _count, GDTFields.BUG_REPORT_HANDLED: False}})
 
-    def insert_bug_exception(self, data) -> bool:
+    def insert_data(self, data) -> bool:
         '''插入异常信息
         @data: 异常信息
         @return: 是否插入成功'''
@@ -204,7 +204,7 @@ class GDTMongoHandleBase:
         _result = collection.insert_one(data)
         return _result.acknowledged
 
-    def get_bug_exceptions(self, query={}) -> List[dict]:
+    def get_datas(self, query={}) -> List[dict]:
         '''获取所有的符合条件的异常信息'''
 
         collection = self.__database.get_collection(GDTCollections.TABLE_BUG_REPORT_EXCEPTION)
@@ -215,7 +215,7 @@ class GDTMongoHandleBase:
                 _result.append(_display_data)
         return _result
     
-    def get_bug_exceptions_as_page(self, index, page_count, query={}) -> List[dict]:
+    def get_datas_at_page(self, index, page_count, query={}) -> List[dict]:
         '''获取第N页的异常信息(全部)'''
 
         if index < 0 or page_count <= 0:
@@ -223,13 +223,13 @@ class GDTMongoHandleBase:
         
         collection = self.__database.get_collection(GDTCollections.TABLE_BUG_REPORT_EXCEPTION)
         _result = []
-        for data in collection.find(query).skip(index * page_count).limit(page_count):
+        for data in collection.find(query).sort(GDTFields.DATA_TIMESTAMP, -1).skip(index * page_count).limit(page_count):
             _display_data = GDTBugUtils._get_bug_display(data)
             if _display_data is not None:
                 _result.append(_display_data)
         return _result
     
-    def update_bug_exception_handle_status(self, _id, handled:bool) -> bool:
+    def update_handle_status(self, _id, handled:bool) -> bool:
         ''''''
 
         collection = self.__database.get_collection(GDTCollections.TABLE_BUG_REPORT_EXCEPTION)
@@ -237,7 +237,7 @@ class GDTMongoHandleBase:
         _result = collection.update_one(_query, {"$set": {GDTFields.BUG_REPORT_HANDLED: handled}})
         return _result.acknowledged
 
-    def get_bug_exception(self, _id) -> bool:
+    def get_data(self, _id) -> bool:
         '''获取异常信息'''
 
         collection = self.__database.get_collection(GDTCollections.TABLE_BUG_REPORT_EXCEPTION)

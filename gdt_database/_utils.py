@@ -1,5 +1,6 @@
 import time
 from typing import List, Dict, Any
+import hashlib
 
 def is_valid_str(value:str) -> bool:
     '''check if given string is not None and length at least 1'''
@@ -73,5 +74,15 @@ def handle_pages_as_url(base:str, pages:List[int], current_page:int, postfix:str
     return _urls
 
 
+def md5(content:str):
+    '''生成给定文本的MD5摘要'''
+
+    md5 = hashlib.md5()
+    md5.update(content.encode("utf-8"))
+    return md5.hexdigest()
+
+
 if __name__ == "__main__":
-    print(timestamp())
+    # print(timestamp())
+    print(md5("hello world"))
+    

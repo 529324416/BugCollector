@@ -3,30 +3,36 @@ from flask import Flask, render_template, request, make_response
 from blueprints.doloctown import *
 from gdt_database import *
 from _gdt_logger import GDTLogger
+
 import _theme
+from server_config import ServerConfig
 
-import os
-import atexit
-import _cookies
+def load_bug_collector(app:flask.Flask, config:ServerConfig):
+    '''初始化BUG收集器'''
 
-# create base helpers
-_logger = GDTLogger("./server_logs")
-_mongo_client = GDTMongoClient("")
-_netload_recorder = NetLoadRecorder(_logger, _mongo_client.get_database("doloctown"))
-_doloctown_api = GDTMongoHandleBase(_mongo_client.get_database("doloctown"))
+    _logger = GDTLogger(config.log_folder)
+    _mongo_client = GDTMongoClient(config.dblink)
+    _netload_recorder = NetLoadRecorder(_logger, _mongo_client.get_database("doloctown"))
+    _doloctown_api = GDTMongoHandleBase(_mongo_client.get_database("doloctown"))
+    _bug_collector = BugCollector_Exception(_doloctown_api, _netload_recorder, import_name=__name__)
+    app.register_blueprint(_bug_collector)
 
-# create flask app
-app = Flask(__name__)
-_bug_collector = BugCollector_Exception(_doloctown_api, _netload_recorder, import_name=__name__)
-app.register_blueprint(_bug_collector)
+def load_base_routes(app:flask.Flask):
+    '''初始化所有基础路由'''
 
-@app.route('/')
+    routes = [
+        ("/", index, ["GET"]),
+        ("/server_status/netload", server_status_netload, ["GET"]),
+        ("/server_status/netload/chart", server_status_netload_chart, ["GET"]),
+        ("/utils/set_theme/<theme>", set_theme, ["GET"])
+    ]
+    for _route, _route_func, _route_methods in routes:
+        app.add_url_rule(_route, view_func=_route_func, methods=_route_methods)
+
 def index():
     '''首页'''
-
     return render_template('index.html', theme=_theme.fetch_theme(), cookies=_bug_collector.cookies)
 
-@app.route('/server_status/netload')
 def server_status_netload():
     '''数据负载'''
 
@@ -50,7 +56,6 @@ def server_status_netload():
                             average_count_err=_average_count_err,
                             recent_total_count_err=_recent_total_count_err)
 
-@app.route('/server_status/netload/chart')
 def server_status_netload_chart():
     '''数据负载图表'''
 
@@ -83,22 +88,32 @@ def server_status_netload_chart():
     )
     return line.dump_options_with_quotes()
 
-@app.route('/utils/set_theme/<theme>')
 def set_theme(theme):
     '''Set the theme of the website.'''
     
     return _theme.set_theme(theme)
 
-def main_debug():
+def run_debug(app:flask.Flask):
     app.run(debug=True)
 
-def main_env(host="0.0.0.0", port=80):
+def run_env(app:flask.Flask, host="0.0.0.0", port=80):
     '''use gevent to run the server'''
 
     from gevent import pywsgi
     server = pywsgi.WSGIServer((host, port), app)
     server.serve_forever()
 
-
 if __name__ == '__main__':
-    main_env()
+    
+    config = ServerConfig.load("./config.json")
+    if not config.is_valid:
+        print("invalid server config")
+
+    print(f"run server at {config.server_addr}")
+    app = flask.Flask(__name__)
+    load_base_routes(app)
+    load_bug_collector(app, config)
+    if config.debug_mode:
+        run_debug(app)
+    else:
+        run_env(app, config.host, config.port)

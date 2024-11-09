@@ -6,7 +6,7 @@ from pyecharts import options as opts
 from gdt_database.data import NetLoadRecorder, GDTMongoHandleBase
 from gdt_database._cons import GDTCollections, GDTFields
 from gdt_database._utils import *
-from gdt_database._bug import GDTBugUtils
+from gdt_database._bug import BugUtils
 
 
 from _cookies import CookieHelper, CookieKeys
@@ -144,23 +144,20 @@ class BugCollector_Exception(Blueprint):
         
         # 读取并验证数据是否有效
         _data = request.get_json()
-        if _data is None or not GDTBugUtils.validate_bug_exception(_data):
+        if _data is None or not BugUtils.validate_bug_exception(_data):
             return jsonify({"status": "error", "message": "invalid post data"})
 
         # 检查是否已经存在相同的异常报告(根据出发点的位置来进行判断)
-        _triggers = _data.get(GDTBugUtils.KEY_TRIGGER_POINTS, [])
+        _triggers = _data.get(BugUtils.KEY_TRIGGER_POINTS, [])
         if len(_triggers) == 0:
             # 没有触发点时，视为无效数据
             return jsonify({"status": "error", "message": "invalid data"})
         else:
-            # 有触发点时，检查是否已经存在相同的异常报告
-            _final_trigger_position = _data.get(GDTBugUtils.KEY_FINAL_TRIGGER_POINT, {})
-            _query = {
-                GDTBugUtils.KEY_NAME: _data.get(GDTBugUtils.KEY_NAME, ""),
-                GDTBugUtils.KEY_MESSAGE: _data.get(GDTBugUtils.KEY_MESSAGE, ""),
-                GDTBugUtils.KEY_FINAL_TRIGGER_POINT: _final_trigger_position,
-                GDTFields.DATA_PLAN_ID: self.__dataapi.current_plan,
-            }
+            _cnt = str()
+            for pt in _triggers:
+                _cnt += pt["code"]
+            _summary_info = md5(_cnt)
+            _query = { BugUtils.KEY_SUMMARY : _summary_info }
             if self.__dataapi.is_data_exists(_query):
                 self.__dataapi.increment_data_count(_query)
                 return jsonify({"status": "error", "message": "data already exists"})
@@ -170,7 +167,8 @@ class BugCollector_Exception(Blueprint):
         _data.setdefault(GDTFields.DATA_TIMESTAMP, timestamp())
         _data.setdefault(GDTFields.DATA_PLAN_ID, self.__dataapi.current_plan)
         _data.setdefault(GDTFields.DATA_COUNT, 1)
-        _data.setdefault(GDTBugUtils.KEY_HANDLED, False)
+        _data.setdefault(BugUtils.KEY_SUMMARY, _summary_info)
+        _data.setdefault(BugUtils.KEY_HANDLED, False)
 
         # 插入数据
         if self.__dataapi.insert_data(_data):
@@ -291,26 +289,26 @@ class BugCollector_Exception(Blueprint):
             return not_found(f"未找到异常报告:{Id}")
         
         # 读取异常消息
-        _name = _exception.get(GDTBugUtils.KEY_NAME, "")
-        _message = _exception.get(GDTBugUtils.KEY_MESSAGE, "")
+        _name = _exception.get(BugUtils.KEY_NAME, "")
+        _message = _exception.get(BugUtils.KEY_MESSAGE, "")
         _except_info = "{}: {}".format(_name, _message)
         
         # 读取异常运行日志
-        _player_log = _exception.get(GDTBugUtils.KEY_PLAYER_LOG, None)
+        _player_log = _exception.get(BugUtils.KEY_PLAYER_LOG, None)
         if _player_log is None:
             return not_found("未找到异常运行日志")
         _player_log = _player_log.split('\n')
-        _player_log = [(_, GDTBugUtils.is_error_line(_)) for _ in _player_log]
+        _player_log = [(_, BugUtils.is_error_line(_)) for _ in _player_log]
 
         # 读取异常堆栈信息
-        _stacktrace = _exception.get(GDTBugUtils.KEY_STACKTRACE, None)
+        _stacktrace = _exception.get(BugUtils.KEY_STACKTRACE, None)
         if _stacktrace is None:
             return not_found("未找到异常堆栈信息")
         _stacktrace = _stacktrace.split('\n')
-        _stacktrace = [(_, GDTBugUtils.is_error_line(_)) for _ in _stacktrace]
+        _stacktrace = [(_, BugUtils.is_error_line(_)) for _ in _stacktrace]
 
         # 读取运行日志
-        _console_log = _exception.get(GDTBugUtils.KEY_CONSOLE_LOG, None)
+        _console_log = _exception.get(BugUtils.KEY_CONSOLE_LOG, None)
         if _console_log is None:
             return not_found("未找到异常运行日志")
         

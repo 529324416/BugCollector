@@ -10,6 +10,8 @@ class _ConfigKeys:
     DBLINK = "dblink"
     HOST = "host"
     PORT = "port"
+    DEBUG = "debug",
+    LOGFOLDER = "log_folder"
 
 class _ConfigUtils:
 
@@ -36,14 +38,14 @@ class _ConfigUtils:
     def is_valid_port(port: int) -> bool:
         return 0 < port < 65536
 
-class GDTServerConfig:
+class ServerConfig:
     '''server configs of game data tracker'''
 
     @staticmethod
     def load(path:str):
         '''given a json file path and read config from this path'''
 
-        _invalid_config = GDTServerConfig("", 0, 0, False)
+        _invalid_config = ServerConfig("", 0, 0, True, False)
         if not os.path.exists(path) or not os.path.isfile(path):
             print("config file \"{path}\" not found")
             return _invalid_config
@@ -57,6 +59,8 @@ class GDTServerConfig:
             _dblink = _src.get(_ConfigKeys.DBLINK)
             _host = _src.get(_ConfigKeys.HOST)
             _port = _src.get(_ConfigKeys.PORT)
+            _debug = _src.get(_ConfigKeys.DEBUG)
+            _log_folder = _src.get(_ConfigKeys.LOGFOLDER)
             
             if _dblink is None or not _ConfigUtils.is_valid_mongodb_uri(_dblink):
                 print(_ConfigKeys.DBLINK + " not found in config file or invalid")
@@ -70,15 +74,37 @@ class GDTServerConfig:
                 print(_ConfigKeys.PORT + " not found in config file or invalid")
                 return _invalid_config
             
-            return GDTServerConfig(_dblink, _host, _port, True)
+            if _log_folder is None or not os.path.exists(_log_folder):
+                print(_ConfigKeys.LOGFOLDER + " not found in config file or invalid")
+                return _invalid_config
+            
+            if _debug is None:
+                print(_ConfigKeys.DEBUG + " not found in config file")
+                return _invalid_config
+            
+            return ServerConfig(_dblink, _host, _port, _debug, _log_folder, True)
         
 
-    def __init__(self, dblink:str, server_host:int, server_port:int, isvalid:bool):
+    def __init__(self, dblink:str, server_host:int, server_port:int, debug:bool, log_folder:str, isvalid:bool):
 
         self.__dblink = dblink
         self.__host = server_host
         self.__port = server_port
+        self.__debug = debug
         self.__is_valid = isvalid
+        self.__log_folder = log_folder
+
+    @property
+    def debug_mode(self):
+        '''if server is in debug mode'''
+
+        return self.__debug
+    
+    @property
+    def log_folder(self):
+        '''get log folder'''
+
+        return self.__log_folder
 
     @property
     def is_valid(self):
@@ -92,7 +118,20 @@ class GDTServerConfig:
         return "http://{}:{}".format(self.__host, self.__port)
     
     @property
-    def db_addr(self):
+    def host(self):
+        '''get server host'''
+
+        return self.__host
+    
+    @property
+    def port(self):
+        '''get server port'''
+
+        return self.__port
+    
+    
+    @property
+    def dblink(self):
         '''get database address of mongodb'''
 
         return self.__dblink
@@ -100,7 +139,7 @@ class GDTServerConfig:
 
 if __name__ == "__main__":
 
-    _config = GDTServerConfig.load("config.json")
+    _config = ServerConfig.load("./config.json")
     print(_config.is_valid)
     print(_config.server_addr)
-    print(_config.db_addr)
+    print(_config.dblink)

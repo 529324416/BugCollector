@@ -1,7 +1,9 @@
 from gdt_database._cons import *
+from gdt_database._utils import *
 
 
-class GDTBugUtils:
+
+class BugUtils:
     
 
     '''BUG-异常结构
@@ -52,6 +54,7 @@ class GDTBugUtils:
     KEY_FINAL_TRIGGER_POINT = "final_trigger_point"
     KEY_CONSOLE_LOG = "console_log"
     KEY_VERSION = "version"
+    KEY_SUMMARY = "summary"
 
     KEY_DVC_CODE = "dvc_code"
     KEY_DVC_TYPE = "dvc_type"
@@ -75,11 +78,11 @@ class GDTBugUtils:
         '''
 
         _id = origin_data.get(GDTFields._SPEC_MONGODB_ID)
-        _name = origin_data.get(GDTBugUtils.KEY_NAME)
-        _message = origin_data.get(GDTBugUtils.KEY_MESSAGE)
+        _name = origin_data.get(BugUtils.KEY_NAME)
+        _message = origin_data.get(BugUtils.KEY_MESSAGE)
         _except_info = "{}: {}".format(_name, _message)
 
-        _trigger_points = origin_data.get(GDTBugUtils.KEY_TRIGGER_POINTS)
+        _trigger_points = origin_data.get(BugUtils.KEY_TRIGGER_POINTS)
         if len(_trigger_points) == 0:
             _except_pos = ""
         else:
@@ -97,7 +100,7 @@ class GDTBugUtils:
             "date": _date,
             "plan_id": _plan_id,
             # "device_info": _device_info,
-            "version": origin_data.get(GDTBugUtils.KEY_VERSION, "unknown"),
+            "version": origin_data.get(BugUtils.KEY_VERSION, "unknown"),
             "handled": origin_data.get(GDTFields.BUG_REPORT_HANDLED, False),
             "count": origin_data.get(GDTFields.DATA_COUNT, 1)
         }
@@ -109,15 +112,15 @@ class GDTBugUtils:
         if data is None or not isinstance(data, dict):
             return False
         
-        _dvc_code = data.get(GDTBugUtils.KEY_DVC_CODE)
+        _dvc_code = data.get(BugUtils.KEY_DVC_CODE)
         if _dvc_code is None or not isinstance(_dvc_code, str):
             return False
         
-        _dvc_type = data.get(GDTBugUtils.KEY_DVC_TYPE)
+        _dvc_type = data.get(BugUtils.KEY_DVC_TYPE)
         if _dvc_type is None or not isinstance(_dvc_type, str):
             return False
         
-        _os = data.get(GDTBugUtils.KEY_OS)
+        _os = data.get(BugUtils.KEY_OS)
         if _os is None or not isinstance(_os, str):
             return False
         
@@ -130,43 +133,56 @@ class GDTBugUtils:
         if data is None or not isinstance(data, dict):
             return False
         
-        _name = data.get(GDTBugUtils.KEY_NAME)
+        _name = data.get(BugUtils.KEY_NAME)
         if _name is None or not isinstance(_name, str):
             return False
         
-        _message = data.get(GDTBugUtils.KEY_MESSAGE)
+        _message = data.get(BugUtils.KEY_MESSAGE)
         if _message is None or not isinstance(_message, str):
             return False
         
-        _final_trigger_point = data.get(GDTBugUtils.KEY_FINAL_TRIGGER_POINT)
+        _final_trigger_point = data.get(BugUtils.KEY_FINAL_TRIGGER_POINT)
         if _final_trigger_point is None or not isinstance(_final_trigger_point, dict):
             return False
         
-        _stacktrace = data.get(GDTBugUtils.KEY_STACKTRACE)
+        _stacktrace = data.get(BugUtils.KEY_STACKTRACE)
         if _stacktrace is None or not isinstance(_stacktrace, str):
             return False
         
-        _trigger_points = data.get(GDTBugUtils.KEY_TRIGGER_POINTS)
+        _trigger_points = data.get(BugUtils.KEY_TRIGGER_POINTS)
         if _trigger_points is None or not isinstance(_trigger_points, list):
             return False
         
-        _player_log = data.get(GDTBugUtils.KEY_PLAYER_LOG)
+        _player_log = data.get(BugUtils.KEY_PLAYER_LOG)
         if _player_log is None or not isinstance(_player_log, str):
             return False
         
-        _console_log = data.get(GDTBugUtils.KEY_CONSOLE_LOG)
+        _console_log = data.get(BugUtils.KEY_CONSOLE_LOG)
         if _console_log is None or not isinstance(_console_log, list):
             return False
         
-        _version = data.get(GDTBugUtils.KEY_VERSION)
+        _version = data.get(BugUtils.KEY_VERSION)
         if _version is None or not isinstance(_version, str):
             return False
         
-        _device = data.get(GDTBugUtils.KEY_DEVICE)
-        return GDTBugUtils._validate_device(_device)
+        _device = data.get(BugUtils.KEY_DEVICE)
+        return BugUtils._validate_device(_device)
     
     @staticmethod
     def is_error_line(line:str) -> bool:
         '''判断是否为异常报告的错误行'''
         
         return line.startswith("at ") or line.startswith("System.") or line.startswith("UnityEngine.")
+    
+    # @staticmethod
+    # def gen_md5(data:dict) -> str:
+    #     '''生成给定数据的MD5摘要'''
+
+    #     trigger_points = data.get(BugUtils.KEY_TRIGGER_POINTS, [])
+    #     if len(trigger_points) == 0:
+    #         return None
+        
+    #     content = str()
+    #     for pt in trigger_points:
+    #         content += pt["code"]
+    #     return md5(content)

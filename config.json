@@ -1,0 +1,7 @@
+{
+    "dblink":"mongodb://localhost:27017/",
+    "host":"0.0.0.0",
+    "port":80,
+    "debug":false,
+    "log_folder":"./logs"
+}

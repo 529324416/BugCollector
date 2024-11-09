@@ -230,8 +230,11 @@ class BugCollector_Exception(Blueprint):
             _title = ("已处理" if _handled == "true" else "未处理") + "异常总数"
             _postfix = "?handled=" + _handled
 
+        _start = timestamp()
         total_count = self.__dataapi.get_data_count(_query)
         _filtered_exceptions = self.__dataapi.get_datas_at_page(_page, _page_size, _query)
+        _end = timestamp()
+        print("查询时间:", _end - _start)
 
         _current_page = _page + 1
         _pages = handle_pages(total_count, _page_size, _current_page, page_range=5)

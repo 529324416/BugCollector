@@ -230,15 +230,19 @@ class BugCollector_Exception(Blueprint):
             _title = ("已处理" if _handled == "true" else "未处理") + "异常总数"
             _postfix = "?handled=" + _handled
 
-        _start = timestamp()
         total_count = self.__dataapi.get_data_count(_query)
         _filtered_exceptions = self.__dataapi.get_datas_at_page(_page, _page_size, _query)
-        _end = timestamp()
-        print("查询时间:", _end - _start)
 
         _current_page = _page + 1
         _pages = handle_pages(total_count, _page_size, _current_page, page_range=5)
         _page_links = handle_pages_as_url("doloctown/bug/exception", _pages, _current_page, postfix=_postfix)
+        _total_page_count = calc_page_count(total_count, _page_size)
+
+        _pages.insert(0, "首页")
+        _pages.append("尾页")
+        _page_links.insert(0, "/doloctown/bug/exception/0" + _postfix)
+        _page_links.append("/doloctown/bug/exception/{}".format(_total_page_count - 1) + _postfix)
+        
         return render_template("doloctown/exception.html", 
                                count=total_count, 
                                title=_title,

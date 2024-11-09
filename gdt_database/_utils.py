@@ -61,11 +61,15 @@ def handle_pages(total_count:int, page_count:int, current_page:int, page_range=2
 
     return _pages
 
+def convert_page_to_url(base:str, page, current_page:int, postfix:str="") -> List[str]:
+    '''将分页列表转换为url列表'''
+    return "" if page == current_page else f"{base}/{page - 1}{postfix}"
+
 def handle_pages_as_url(base:str, pages:List[int], current_page:int, postfix:str="") -> List[str]:
 
     _urls = []
     for page in pages:
-        _urls.append(f"{base}/{page - 1}{postfix}" if page != current_page else "")
+        _urls.append(convert_page_to_url(base, page, current_page, postfix))
     return _urls
 
 

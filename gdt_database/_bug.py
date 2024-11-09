@@ -34,6 +34,7 @@ class GDTBugUtils:
                 ["message", "#ffffff"],
                 //...
             ],
+            "version": "0.86.16",
             "device": {
                 "dvc_code": "29da5f481dff59c7ba7963bd3aad06b27e2ed020",
                 "dvc_type": "Desktop",
@@ -50,6 +51,7 @@ class GDTBugUtils:
     KEY_DEVICE = "device"
     KEY_FINAL_TRIGGER_POINT = "final_trigger_point"
     KEY_CONSOLE_LOG = "console_log"
+    KEY_VERSION = "version"
 
     KEY_DVC_CODE = "dvc_code"
     KEY_DVC_TYPE = "dvc_type"
@@ -67,6 +69,7 @@ class GDTBugUtils:
             "date":"",
             "plan_id":"",
             "device_info":"",
+            "version":"",
             "handled":False/True,
             "count":0
         }
@@ -96,10 +99,10 @@ class GDTBugUtils:
             "date": _date,
             "plan_id": _plan_id,
             "device_info": _device_info,
+            "version": origin_data.get(GDTBugUtils.KEY_VERSION, "unknown"),
             "handled": origin_data.get(GDTFields.BUG_REPORT_HANDLED, False),
             "count": origin_data.get(GDTFields.DATA_COUNT, 1)
         }
-
 
     @staticmethod
     def _validate_device(data:dict) -> bool:
@@ -122,7 +125,6 @@ class GDTBugUtils:
         
         return True
         
-
     @staticmethod
     def validate_bug_exception(data:dict) -> bool:
         '''验证异常报告的数据结构是否有效'''
@@ -158,10 +160,13 @@ class GDTBugUtils:
         if _console_log is None or not isinstance(_console_log, list):
             return False
         
+        _version = data.get(GDTBugUtils.KEY_VERSION)
+        if _version is None or not isinstance(_version, str):
+            return False
+        
         _device = data.get(GDTBugUtils.KEY_DEVICE)
         return GDTBugUtils._validate_device(_device)
     
-
     @staticmethod
     def is_error_line(line:str) -> bool:
         '''判断是否为异常报告的错误行'''

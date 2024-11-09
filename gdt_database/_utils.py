@@ -62,7 +62,6 @@ def handle_pages(total_count:int, page_count:int, current_page:int, page_range=2
     return _pages
 
 def handle_pages_as_url(base:str, pages:List[int], current_page:int, postfix:str="") -> List[str]:
-    '''获取分页列表的URL信息，以当前页为中心，左右各取page_range页'''
 
     _urls = []
     for page in pages:

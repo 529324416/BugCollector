@@ -167,59 +167,6 @@ class GDTMongoHandleBase:
         if _result.acknowledged:
             return (True, "test plan created successfully")
         return (False, "test plan created failed due to unknown reason")
-
-    # def _pack_data(self, data:dict) -> dict:
-    #     '''将给定的数据按照测试计划打包，并附加日期后返回'''
-
-    #     if not isinstance(data, dict) or self.__current_test_plan_id is None:
-    #         return None
-        
-    #     _client_data = data.copy()
-    #     _result = {
-    #         GDTFields.DATA_PLAN_ID: self.__current_test_plan_id,
-    #         GDTFields.DATA_DATE: date_yymmdd(),
-    #         GDTFields.DATA_CLIENT_DATA: _client_data
-    #     }
-    #     return _result
-    
-    # def _pack_many_data(self, datas:List[dict]) -> List[dict]:
-    #     '''将给定的数据列表按照测试计划打包，并附加日期后返回'''
-
-    #     if not isinstance(datas, list) or self.__current_test_plan_id is None:
-    #         return None
-        
-    #     _date = date_yymmdd()
-    #     _result = []
-    #     for data in datas:
-    #         _client_data = data.copy()
-    #         _result.append({
-    #             GDTFields.DATA_PLAN_ID: self.__current_test_plan_id,
-    #             GDTFields.DATA_DATE: _date,
-    #             GDTFields.DATA_CLIENT_DATA: _client_data
-    #         })
-    #     return _result
-    
-    # def insert_one(self, collection_name:str, client_data:dict) -> bool:
-    #     '''try insert single data'''
-
-    #     _data = self._pack_data(client_data)
-    #     if _data is None:
-    #         return False
-        
-    #     collection = self.__database.get_collection(collection_name)
-    #     _result = collection.insert_one(_data)
-    #     return _result.acknowledged
-        
-    # def insert_many(self, collection_name:str, client_datas:List[dict]) -> bool:
-    #     '''try insert multiple data'''
-
-    #     _datas = self._pack_many_data(client_datas)
-    #     if _datas is None:
-    #         return False
-        
-    #     collection = self.__database.get_collection(collection_name)
-    #     _result = collection.insert_many(_datas)
-    #     return _result.acknowledged
     
     def bug_exception_count(self, query:dict={}) -> int:
         '''获取异常总数量'''
@@ -227,26 +174,32 @@ class GDTMongoHandleBase:
         collection = self.__database.get_collection(GDTCollections.TABLE_BUG_REPORT_EXCEPTION)
         return collection.count_documents(query)
     
-    def bug_exception_exists(self, query:dict) -> bool:
+    def is_data_exists(self, query:dict) -> bool:
         '''检查异常是否存在'''
 
         collection = self.__database.get_collection(GDTCollections.TABLE_BUG_REPORT_EXCEPTION)
         result = collection.find_one(query)
+        return result != None
+
+    def increment_data_count(self, query:dict) -> None:
+        '''增加异常数量并将异常改为未处理状态
+        @query: 查询条件'''
+
+        collection = self.__database.get_collection(GDTCollections.TABLE_BUG_REPORT_EXCEPTION)
+        result = collection.find_one(query)
         if result is None:
-            return False
+            return
         
         # update count and return
         _id = result[GDTFields._SPEC_MONGODB_ID]
         _count = result.get(GDTFields.DATA_COUNT, 1) + 1
         collection.update_one({GDTFields._SPEC_MONGODB_ID: _id}, {"$set": {GDTFields.DATA_COUNT: _count, GDTFields.BUG_REPORT_HANDLED: False}})
-        return True
 
     def insert_bug_exception(self, data) -> bool:
         '''插入异常信息
         @data: 异常信息
         @return: 是否插入成功'''
 
-        # data.setdefault(GDTFields.DATA_PLAN_ID, self.__current_test_plan_id)
         collection = self.__database.get_collection(GDTCollections.TABLE_BUG_REPORT_EXCEPTION)
         _result = collection.insert_one(data)
         return _result.acknowledged
@@ -283,7 +236,6 @@ class GDTMongoHandleBase:
         _query = {GDTFields._SPEC_MONGODB_ID: ObjectId(_id)}
         _result = collection.update_one(_query, {"$set": {GDTFields.BUG_REPORT_HANDLED: handled}})
         return _result.acknowledged
-    
 
     def get_bug_exception(self, _id) -> bool:
         '''获取异常信息'''

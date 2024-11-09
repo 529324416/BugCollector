@@ -45,7 +45,7 @@ class ServerConfig:
     def load(path:str):
         '''given a json file path and read config from this path'''
 
-        _invalid_config = ServerConfig("", 0, 0, True, False)
+        _invalid_config = ServerConfig("", 0, 0, True, "", False)
         if not os.path.exists(path) or not os.path.isfile(path):
             print("config file \"{path}\" not found")
             return _invalid_config

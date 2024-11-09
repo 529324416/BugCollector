@@ -7,6 +7,7 @@ from _gdt_logger import GDTLogger
 import _theme
 from server_config import ServerConfig
 _netload_recorder = None
+_bug_collector = None
 
 def load_bug_collector(app:flask.Flask, config:ServerConfig):
     '''初始化BUG收集器'''

@@ -12,6 +12,9 @@ _bug_collector = None
 def load_bug_collector(app:flask.Flask, config:ServerConfig):
     '''初始化BUG收集器'''
 
+    global _netload_recorder
+    global _bug_collector
+
     _logger = GDTLogger(config.log_folder)
     _mongo_client = GDTMongoClient(config.dblink)
     _netload_recorder = NetLoadRecorder(_logger, _mongo_client.get_database("doloctown"))
@@ -110,12 +113,13 @@ if __name__ == '__main__':
     config = ServerConfig.load("./config.json")
     if not config.is_valid:
         print("invalid server config")
-
-    print(f"run server at {config.server_addr}")
-    app = flask.Flask(__name__)
-    load_base_routes(app)
-    load_bug_collector(app, config)
-    if config.debug_mode:
-        run_debug(app)
     else:
-        run_env(app, config.host, config.port)
+
+        print(f"run server at {config.server_addr}")
+        app = flask.Flask(__name__)
+        load_base_routes(app)
+        load_bug_collector(app, config)
+        if config.debug_mode:
+            run_debug(app)
+        else:
+            run_env(app, config.host, config.port)

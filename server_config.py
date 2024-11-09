@@ -10,7 +10,7 @@ class _ConfigKeys:
     DBLINK = "dblink"
     HOST = "host"
     PORT = "port"
-    DEBUG = "debug",
+    DEBUG = "debug"
     LOGFOLDER = "log_folder"
 
 class _ConfigUtils:
@@ -74,7 +74,7 @@ class ServerConfig:
                 print(_ConfigKeys.PORT + " not found in config file or invalid")
                 return _invalid_config
             
-            if _log_folder is None or not os.path.exists(_log_folder):
+            if _log_folder is None:
                 print(_ConfigKeys.LOGFOLDER + " not found in config file or invalid")
                 return _invalid_config
             

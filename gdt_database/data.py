@@ -223,7 +223,7 @@ class GDTMongoHandleBase:
         
         collection = self.__database.get_collection(GDTCollections.TABLE_BUG_REPORT_EXCEPTION)
         _result = []
-        for data in collection.find(query).skip(index * page_count).limit(page_count):
+        for data in collection.find(query).sort(GDTFields.DATA_TIMESTAMP, -1).skip(index * page_count).limit(page_count):
             _display_data = GDTBugUtils._get_bug_display(data)
             if _display_data is not None:
                 _result.append(_display_data)

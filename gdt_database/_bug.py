@@ -5,7 +5,6 @@ from gdt_database._utils import *
 
 class BugUtils:
     
-
     '''BUG-异常结构
         {
             "name": "Exception",
@@ -42,6 +41,7 @@ class BugUtils:
                 "dvc_type": "Desktop",
                 "os": "Windows 11  (10.0.22631) 64bit"
             },
+            "archive":"...."
         }
     '''
 
@@ -51,6 +51,7 @@ class BugUtils:
     KEY_TRIGGER_POINTS = "trigger_points"
     KEY_PLAYER_LOG = "player_log"
     KEY_DEVICE = "device"
+    KEY_ARCHIVE_DATA = "archive"
     KEY_FINAL_TRIGGER_POINT = "final_trigger_point"
     KEY_CONSOLE_LOG = "console_log"
     KEY_VERSION = "version"
@@ -63,7 +64,46 @@ class BugUtils:
     KEY_HANDLED = "handled"
 
     @staticmethod
-    def _get_bug_display(origin_data):
+    def get_bug_session(origin_data):
+        '''获取BUG会话的显示信息
+        {...} -> {
+            "id":"mongodb_id"
+            "except_info":"",
+            "except_pos":"",
+            "records":[],
+            "reject":False,
+            "count":1,
+            "update_time":"2023-10-01"
+        }
+        '''
+
+        _id = origin_data.get(GDTFields._SPEC_MONGODB_ID)
+        _message = origin_data.get(GDTFields.BUG_SESSION_MESSAGE, "")
+        _records = origin_data.get(GDTFields.BUG_SESSION_RECORDS, [])        
+        _reject = origin_data.get(GDTFields.BUG_SESSION_REJECT_REPORT, False)
+        _count = len(_records)
+        _update_time = origin_data.get(GDTFields.BUG_SESSION_UPDATE_TIME, date_yymmdd())
+        _version = origin_data.get(GDTFields.BUG_SESSION_UPDATE_VERSION, "unknown")
+
+        _trigger_points = _records[0].get(BugUtils.KEY_TRIGGER_POINTS)
+        if len(_trigger_points) == 0:
+            _except_pos = ""
+        else:
+            _first = _trigger_points[0]
+            _except_pos = "{}({})".format(_first.get("code"), _first.get("filepath"))
+
+        return {
+            "id": _id,
+            "except_info": _message,
+            "except_pos": _except_pos,
+            "reject": _reject,
+            "count": _count,
+            "version": _version,
+            "date": _update_time
+        }
+
+    @staticmethod
+    def get_bug_display(origin_data):
         '''获取异常报告的显示信息
         {...} -> {
             "id":"mongodb_id"
@@ -72,12 +112,14 @@ class BugUtils:
             "date":"",
             "plan_id":"",
             "version":"",
-            "handled":False/True,
-            "count":0
+            "device":{
+                "os":"windows",
+                "dvc_type":"desktop",
+            },
         }
         '''
 
-        _id = origin_data.get(GDTFields._SPEC_MONGODB_ID)
+        _id = origin_data.get(GDTFields.BUG_SESSION_ID)
         _name = origin_data.get(BugUtils.KEY_NAME)
         _message = origin_data.get(BugUtils.KEY_MESSAGE)
         _except_info = "{}: {}".format(_name, _message)
@@ -90,19 +132,17 @@ class BugUtils:
             _except_pos = "{}({})".format(_first.get("code"), _first.get("filepath"))
 
         _date = origin_data.get(GDTFields.DATA_DATE)
-        _plan_id = origin_data.get(GDTFields.DATA_PLAN_ID)
-        # _device = origin_data.get(GDTBugUtils.KEY_DEVICE)
-        # _device_info = "{}({})".format(_device.get(GDTBugUtils.KEY_DVC_TYPE), _device.get(GDTBugUtils.KEY_OS))
+        _device = origin_data.get(BugUtils.KEY_DEVICE)
+        _device_type = _device.get(BugUtils.KEY_DVC_TYPE)
+        _os = _device.get(BugUtils.KEY_OS)
         return {
             "id": _id,
             "except_info": _except_info,
             "except_pos": _except_pos,
             "date": _date,
-            "plan_id": _plan_id,
-            # "device_info": _device_info,
             "version": origin_data.get(BugUtils.KEY_VERSION, "unknown"),
-            "handled": origin_data.get(GDTFields.BUG_REPORT_HANDLED, False),
-            "count": origin_data.get(GDTFields.DATA_COUNT, 1)
+            "dvc_type": _device_type,
+            "os": _os,
         }
 
     @staticmethod
@@ -165,6 +205,11 @@ class BugUtils:
         if _version is None or not isinstance(_version, str):
             return False
         
+        # 检查目标是否包含了存档数据
+        _archive_data = data.get(BugUtils.KEY_ARCHIVE_DATA)
+        if _archive_data is None or not isinstance(_archive_data, str):
+            return False
+        
         _device = data.get(BugUtils.KEY_DEVICE)
         return BugUtils._validate_device(_device)
     
@@ -174,15 +219,3 @@ class BugUtils:
         
         return line.startswith("at ") or line.startswith("System.") or line.startswith("UnityEngine.")
     
-    # @staticmethod
-    # def gen_md5(data:dict) -> str:
-    #     '''生成给定数据的MD5摘要'''
-
-    #     trigger_points = data.get(BugUtils.KEY_TRIGGER_POINTS, [])
-    #     if len(trigger_points) == 0:
-    #         return None
-        
-    #     content = str()
-    #     for pt in trigger_points:
-    #         content += pt["code"]
-    #     return md5(content)

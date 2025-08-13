@@ -118,6 +118,24 @@ function bug_exception_update_handle_status(url, data_id, value)
     });
 }
 
+
+function bug_exception_update_reject(url, data_id, value)
+{
+    fetch(url, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            'id': data_id,
+            'reject': value
+        })
+    }).then(response => response.json())
+    .then(data => {
+        reload_main();
+    });
+}
+
 function update_theme_now()
 {
     var currentTheme = document.documentElement.getAttribute('data-theme');
@@ -133,6 +151,34 @@ function update_theme_now()
             reload_main();
         });
 }
+
+function delete_bug_session(url, id)
+{
+
+    if(!confirm("确定要删除该异常会话吗？"))
+    {
+        return;
+    }
+
+    fetch(url, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            'id': id
+        })
+    }).then(response => response.json())
+    .then(data => {
+        if(data.success)
+        {
+            reload_main();
+        }else{
+            alert(data.message);
+        }
+    });
+}
+
 
 function mark_menu_status(elementId, classAttr)
 {
@@ -160,3 +206,4 @@ function remove_loading_anim(id)
     if(element == null) return;
     element.innerHTML = element.innerHTML.replace(_loading, "");
 }
+

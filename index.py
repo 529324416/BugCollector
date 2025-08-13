@@ -98,8 +98,8 @@ def set_theme(theme):
     
     return _theme.set_theme(theme)
 
-def run_debug(app:flask.Flask):
-    app.run(debug=True)
+def run_debug(app:flask.Flask, host, port):
+    app.run(host=host, port=port, debug=True)
 
 def run_env(app:flask.Flask, host="0.0.0.0", port=80):
     '''use gevent to run the server'''
@@ -120,6 +120,6 @@ if __name__ == '__main__':
         load_base_routes(app)
         load_bug_collector(app, config)
         if config.debug_mode:
-            run_debug(app)
+            run_debug(app, config.host, config.port)
         else:
             run_env(app, config.host, config.port)

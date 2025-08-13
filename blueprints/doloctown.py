@@ -19,6 +19,14 @@ def not_found(message="404 Not Found"):
     return render_template("not_found_page.html", theme=_theme.fetch_theme(), message=message)
 
 
+def get_exception_summary(msg, trigger_points):
+    '''获取提交数据触发点摘要信息'''
+
+    for pt in trigger_points:
+        msg += pt["code"]
+    return md5(msg)
+
+
 class BugCollector_Exception(Blueprint):
 
     COOKIE_KEY_LAST_MENU_URL = "last_url"
@@ -56,14 +64,15 @@ class BugCollector_Exception(Blueprint):
 
         routes = [
 
-            # 测试计划
-            ("/test_plans", self.test_plans, ["GET"]),
-
             # 异常报告
-            ("/bug/exception/<page>", self._bug_exception_get_page, ["GET"]),
-            ("/bug/exception/upload", self._bug_exception_upload, ["POST"]),
+            ("/bug/exception/<page>", self.get_bug_sessions_of_page, ["GET"]),
+            ("/bug/exception/upload", self.upload_exception, ["POST"]),
+            ("/bug/exception/delete", self.delete_exception, ["POST"]),
+            ("/bug/exception/archive/<Id>/<index>", self.download_bug_session_archive, ["GET"]),
+            ("/bug/exception/session/<Id>/<page>", self.get_bug_session_detail_of_page, ["GET"]),
             ("/bug/exception/update/handle_status", self._bug_exception_update_handle_status, ["POST"]),
-            ("/bug/exception/details/<Id>", self.bug_exception_details, ["GET"]),
+            ("/bug/exception/update/reject", self._bug_exception_update_reject, ["POST"]),
+            ("/bug/exception/details/<Id>/<index>", self.bug_exception_details, ["GET"]),
             ("/bug/exception/utils/set_last_menu", self._set_last_bug_exception_menu, ["GET"]),
         ]
         for _route, _route_func, _route_methods in routes:
@@ -124,23 +133,24 @@ class BugCollector_Exception(Blueprint):
         )
         return line.dump_options_with_quotes()
 
-    # 关于测试计划
-    def test_plans(self):
-        '''测试计划'''
+    # # 关于测试计划
+    # def test_plans(self):
+    #     '''测试计划'''
 
-        _plans = self.__dataapi.all_test_plans
-        return render_template("test_plans.html", plans=_plans, theme=_theme.fetch_theme(), current_plan=self.__dataapi.current_plan)
+    #     _plans = self.__dataapi.all_test_plans
+    #     return render_template("test_plans.html", plans=_plans, theme=_theme.fetch_theme(), current_plan=self.__dataapi.current_plan)
     
-    def _bug_exception_upload(self):
+    def upload_exception(self):
         '''BUG报告: 异常报告上传'''
 
         self.__netload_recorder.record()
         if request.method != 'POST':
             return jsonify({"status": "error", "message": f"unsupported method '{request.method}' "})
         
-        # 当前系统没有设立测试计划时，不予接受所有数据传输
-        if self.__dataapi.current_plan is None:
-            return jsonify({"status": "error", "message": "test plan is unset"})
+        # NOTE: biscuit@2025.08.13 不再设立测试计划
+        # # 当前系统没有设立测试计划时，不予接受所有数据传输
+        # if self.__dataapi.current_plan is None:
+        #     return jsonify({"status": "error", "message": "test plan is unset"})
         
         # 读取并验证数据是否有效
         _data = request.get_json()
@@ -152,30 +162,172 @@ class BugCollector_Exception(Blueprint):
         if len(_triggers) == 0:
             # 没有触发点时，视为无效数据
             return jsonify({"status": "error", "message": "invalid data"})
+        
+        # NOTE: 有效数据，将其上传到数据库
+        # 为该条数据附加额外信息(包括IP地址、日期、时间戳等)
+        _data.setdefault(GDTFields.DATA_IP, request.remote_addr)
+        _data.setdefault(GDTFields.DATA_DATE, date_yymmdd())            # 日期
+        _data.setdefault(GDTFields.DATA_TIMESTAMP, timestamp())         # 时间戳
+
+        # 获取数据的摘要信息以便于检查是否存在类似的数据
+        bugId = get_exception_summary(_data[BugUtils.KEY_MESSAGE], _triggers)
+        _query = { GDTFields.BUG_SESSION_ID : bugId }
+        if not self.__dataapi.is_data_exists(_query):
+            # TODO: 没有存在任何数据时，为其创建一条新的异常会话
+            bug_session = { GDTFields.BUG_SESSION_ID : bugId }
+            bug_session.setdefault(GDTFields.BUG_SESSION_REJECT_REPORT, False)
+            bug_session.setdefault(GDTFields.BUG_SESSION_RECORDS, [ _data ])
+            bug_session.setdefault(GDTFields.BUG_SESSION_MESSAGE, _data[BugUtils.KEY_MESSAGE])
+            bug_session.setdefault(GDTFields.BUG_SESSION_UPDATE_TIME, _data[GDTFields.DATA_DATE])  # BUG会话的更新时间
+            bug_session.setdefault(GDTFields.BUG_SESSION_UPDATE_VERSION, _data.get(BugUtils.KEY_VERSION, "unknown"))
+
+            # 插入数据
+            if self.__dataapi.insert_data(bug_session):
+                return jsonify({"status": "ok", "message": "upload success"})
+            return jsonify({"status": "error", "message": "insert data failed, database error"})
         else:
-            _cnt = str()
-            for pt in _triggers:
-                _cnt += pt["code"]
-            _summary_info = md5(_cnt)
-            _query = { BugUtils.KEY_SUMMARY : _summary_info }
-            if self.__dataapi.is_data_exists(_query):
-                self.__dataapi.increment_data_count(_query)
-                return jsonify({"status": "error", "message": "data already exists"})
+            # TODO: 数据存在时，将数据加入到Bug会话的列表中..
+            self.__dataapi.add_bug_record(_query, _data)
+            return jsonify({"status": "error", "message": "data already exists"})
 
-        # 为本次上传附加时间信息等默认数据
-        _data.setdefault(GDTFields.DATA_DATE, date_yymmdd())
-        _data.setdefault(GDTFields.DATA_TIMESTAMP, timestamp())
-        _data.setdefault(GDTFields.DATA_PLAN_ID, self.__dataapi.current_plan)
-        _data.setdefault(GDTFields.DATA_COUNT, 1)
-        _data.setdefault(BugUtils.KEY_SUMMARY, _summary_info)
-        _data.setdefault(BugUtils.KEY_HANDLED, False)
+    def delete_exception(self):
+        '''删除指定的数据'''
 
-        # 插入数据
-        if self.__dataapi.insert_data(_data):
-            return jsonify({"status": "ok", "message": "upload success"})
-        return jsonify({"status": "error", "message": "insert data failed, database error"})
+        if request.method != 'POST':
+            return jsonify({"status": "error", "message": "请求方法错误"})
+        
+        _data = request.get_json()
+        if _data is None:
+            return jsonify({"status": "error", "message": "请求数据无效"})
+        
+        _id = _data.get("id", "")
+        if not _id:
+            return jsonify({"status": "error", "message": "请求数据无效"})
+        
+        if self.__dataapi.delete_data(_id):
+            return jsonify({"status": "ok", "message": "删除成功", "success": True})
+        return jsonify({"status": "error", "message": "删除失败，数据库错误", "success": False})
 
-    def _bug_exception_get(self):
+    # def get_bug_session_detail(self, Id):
+    #     '''获取BUG会话页面'''
+
+    #     if request.method != 'GET':
+    #         return jsonify({"status": "error", "message": "请求方法错误"})
+        
+    #     _session = self.__dataapi.get_data(Id)
+    #     if _session is None:
+    #         return not_found(f"未找到BUG会话:{Id}")
+        
+    #     return render_template("doloctown/exception_session.html",
+    #                            count = len(_session.get(GDTFields.BUG_SESSION_RECORDS, [])),
+    #                            session=_session,
+    #                            theme=_theme.fetch_theme(),
+    #                            cookies=self.cookies,
+    #                            date=date_yymmdd_prettry(),
+    #                            session_id=Id)
+
+    
+    def download_bug_session_archive(self, Id, index):
+        '''下载BUG会话的存档数据
+        @Id: BUG会话的ID
+        @index: BUG会话记录的索引'''
+
+        # 检查请求方法
+        output = None
+        if request.method != 'GET':
+            output = {"status": "error", "message": "请求方法错误"}
+
+        # 获取JSON数据
+        _session = self.__dataapi.get_data(Id)
+        if _session is None:
+            output = {"status": "error", "message": f"未找到BUG会话:{Id}"}
+
+        try:
+            _index = int(index)
+        except ValueError:
+            output = {"status": "error", "message": f"索引错误: {index}, 需要整数类型的索引"}
+        
+        _records = _session.get(GDTFields.BUG_SESSION_RECORDS, [])
+        if _index < 0 or _index >= len(_records):
+            output = {"status": "error", "message": f"索引错误: {index}, BUG会话记录数量: {len(_records)}"}
+
+        output = _records[_index][BugUtils.KEY_ARCHIVE_DATA]
+        filename = f"bug_session_{Id}_record_{index}.json"
+        response = flask.Response(
+            output,
+            mimetype="application/json",
+            headers={"Content-Disposition": f"attachment;filename={filename}"}
+        )
+        return response
+
+    def get_bug_session_detail_of_page(self, Id, page):
+        '''获取BUG会话的记录分页数据'''
+
+        if request.method != 'GET':
+            return jsonify({"status": "error", "message": "请求方法错误"})
+        
+        try:
+            _page = int(page)
+            if _page < 0:
+                return jsonify({"status": "error", "message": "请求数据无效"})
+        except ValueError:
+            return jsonify({"status": "error", "message": "请求数据无效"})
+        
+
+        _session = self.__dataapi.get_data(Id)
+        if _session is None:
+            return not_found(f"未找到BUG会话:{Id}")
+        
+        _title = "异常报告详情"
+        _page_size = 10         # 定义每页显示的数量/暂时写死
+        _records = _session.get(GDTFields.BUG_SESSION_RECORDS, [])
+        
+        total_count = len(_records)
+        # 从_records中获取第_page页的数据
+        if total_count == 0:
+            records = []
+        else:
+            _start_index = _page * _page_size
+            _end_index = min(_start_index + _page_size, total_count)
+            records = _records[_start_index:_end_index]
+
+        displaied_records = []
+        for _record in records:
+            # 处理每条记录
+            idx = _records.index(_record)
+            displaied_record = BugUtils.get_bug_display(_record)
+            displaied_record["download_url"] = f"/doloctown/bug/exception/archive/{Id}/{idx}"
+            displaied_record["details_url"] = f"/doloctown/bug/exception/details/{Id}/{idx}"
+            displaied_records.append(displaied_record)
+
+        # _filtered_exceptions = self.__dataapi.get_datas_at_page(_page, _page_size, _query)
+
+        _current_page = _page + 1
+        _pages = handle_pages(total_count, _page_size, _current_page, page_range=5)
+        _page_links = handle_pages_as_url(f"/bug/exception/session/{Id}", _pages, _current_page, postfix="")
+        _total_page_count = calc_page_count(total_count, _page_size)
+
+        _pages.insert(0, "首页")
+        _pages.append("尾页")
+        _page_links.insert(0, f"/bug/exception/session/{Id}" + "/0")
+        _page_links.append(f"/bug/exception/session/{Id}" + "/{}".format(_total_page_count - 1))
+
+        return render_template("doloctown/exception_session.html", 
+                               theme =_theme.fetch_theme(),
+                               backurl = f"/doloctown/bug/exception/{Id}",
+                               sessionId = Id,
+                               count=total_count, 
+                               title=_title,
+                               date=date_yymmdd_prettry(), 
+                               records=displaied_records,
+                               page_size = _page_size,
+                               current_page=_page,
+                               page_count = len(_pages),
+                               pages=_pages,
+                               page_links=_page_links)
+
+
+    def get_bug_sessions(self):
         '''异常报告'''
 
         if request.method != 'GET':
@@ -205,7 +357,7 @@ class BugCollector_Exception(Blueprint):
         _cookie.set_cookie_to(BugCollector_Exception.COOKIE_KEY_LAST_MENU_ID, menu_id, res)
         return res
 
-    def _bug_exception_get_page(self, page):
+    def get_bug_sessions_of_page(self, page):
         '''异常报告分页'''
 
         if request.method != 'GET':
@@ -276,8 +428,36 @@ class BugCollector_Exception(Blueprint):
         
         print("更新失败")
         return jsonify({"status": "error", "message": "数据库错误"})
+    
 
-    def bug_exception_details(self, Id):
+    def _bug_exception_update_reject(self):
+        '''更新异常报告的拒绝状态'''
+
+        if request.method != 'POST':
+            return jsonify({"status": "error", "message": "请求方法错误"})
+        
+        _data = request.get_json()
+        if _data is None:
+            print("未设置请求数据")
+            return jsonify({"status": "error", "message": "请求数据无效"})
+        
+        _id = _data.get("id", "")
+        _rejected = _data.get("reject", False)
+
+        if not isinstance(_rejected, bool):
+            print("请求数据无效")
+            return jsonify({"status": "error", "message": "请求数据无效"})
+        
+        if self.__dataapi.update_bug_reject(_id, _rejected):
+            print("更新成功")
+            return jsonify({"status": "ok", "message": "更新成功"})
+        
+        print("更新失败")
+        return jsonify({"status": "error", "message": "数据库错误"})
+
+
+
+    def bug_exception_details(self, Id, index):
         '''异常报告详情
         @Id: 异常报告的ID'''
 
@@ -287,6 +467,20 @@ class BugCollector_Exception(Blueprint):
         _exception = self.__dataapi.get_data(Id)
         if _exception is None:
             return not_found(f"未找到异常报告:{Id}")
+        
+        # 检查索引是否有效
+        try:
+            _index = int(index)
+        except ValueError:
+            return not_found(f"索引错误: {index}, 需要整数类型的索引")
+        
+        _records = _exception.get(GDTFields.BUG_SESSION_RECORDS, [])
+        if _index < 0 or _index >= len(_records):
+            return not_found(f"索引错误: {index}, BUG会话记录数量: {len(_records)}")
+        
+        _exception = _records[_index]
+        if _exception is None:
+            return not_found("未找到异常数据")
         
         # 读取异常消息
         _name = _exception.get(BugUtils.KEY_NAME, "")
@@ -314,7 +508,8 @@ class BugCollector_Exception(Blueprint):
         
         _exception = dict(_exception)
         return render_template(
-            "doloctown/exception_details.html", 
+            "doloctown/exception_details.html",
+            backurl = f"/doloctown/bug/exception/session/{Id}/{_index}",
             ex_message=_except_info,
             player_log = _player_log, 
             stacktrace = _stacktrace,

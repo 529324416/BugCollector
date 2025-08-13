@@ -1,7 +1,7 @@
 {
     "dblink":"mongodb://127.0.0.1:27017/",
     "host":"0.0.0.0",
-    "port":80,
-    "debug":false,
+    "port":5000,
+    "debug":true,
     "log_folder":"./logs"
 }

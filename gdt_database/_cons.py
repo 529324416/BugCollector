@@ -38,6 +38,16 @@ class GDTFields:
     BUG_REPORT_HANDLED = "handled"
     BUG_REPORT_EXCEPTION_DETAIL = "exception"
 
+    # 关于BUG会话
+    BUG_SESSION_ID = "id"
+    BUG_SESSION_RECORDS = "records"
+    BUG_SESSION_COUNT = "count"
+    BUG_SESSION_MESSAGE = "message"
+    BUG_SESSION_REJECT_REPORT = "reject"
+    BUG_SESSION_UPDATE_TIME = "update_time"
+    BUG_SESSION_UPDATE_VERSION = "update_version"  # BUG会话的最新版本号
+
+
     # 关于测试计划
     TEST_PLAN_ID = "test_plan_id"
     TEST_PLAN_NAME = "name"
@@ -47,9 +57,10 @@ class GDTFields:
     TEST_PLAN_CREATOR = "creator"
     
     # 关于单个数据
-    DATA_CLIENT_DATA = "client_data"
-    DATA_PLAN_ID = "__tpid"
-    DATA_DATE = "__date"
-    DATA_DATE_NUM = "__date_num"
-    DATA_TIMESTAMP = "__timestamp"
-    DATA_COUNT = "__count"
+    # DATA_CLIENT_DATA = "client_data"
+    # DATA_PLAN_ID = "__tpid"
+    DATA_DATE = "date"
+    DATA_IP = "ip"
+    # DATA_DATE_NUM = "__date_num"
+    DATA_TIMESTAMP = "timestamp"
+    # DATA_COUNT = "__count"

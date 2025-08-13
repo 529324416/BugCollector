@@ -181,19 +181,73 @@ class GDTMongoHandleBase:
         result = collection.find_one(query)
         return result != None
 
-    def increment_data_count(self, query:dict) -> None:
-        '''增加异常数量并将异常改为未处理状态
-        @query: 查询条件'''
+    def add_bug_record(self, query:dict, data:dict) -> bool:
+        '''对于一条已有记录的BUG, 将新的数据添加至其列表'''
+
+        collection = self.__database.get_collection(GDTCollections.TABLE_BUG_REPORT_EXCEPTION)
+        result = collection.find_one(query)
+        if result is None:
+            return False
+        
+        # check if rejected
+        if result.get(GDTFields.BUG_SESSION_REJECT_REPORT, False):
+            return False
+
+        # update records
+        records = result[GDTFields.BUG_SESSION_RECORDS]
+        records.append(data)
+        update_time = date_yymmdd()
+        update_version = data.get(BugUtils.KEY_VERSION, "unknown")
+
+        # ensure update target data
+        _id = result[GDTFields._SPEC_MONGODB_ID]
+        query = {GDTFields._SPEC_MONGODB_ID: _id}
+        collection.update_one(query, {"$set": {
+                GDTFields.BUG_SESSION_RECORDS: records,
+                GDTFields.BUG_SESSION_UPDATE_TIME: update_time,
+                GDTFields.BUG_SESSION_UPDATE_VERSION: update_version
+            }
+        })
+        return True
+
+    # def increment_data_count(self, query:dict) -> None:
+    #     '''增加异常数量并将异常改为未处理状态
+    #     @query: 查询条件'''
+
+    #     collection = self.__database.get_collection(GDTCollections.TABLE_BUG_REPORT_EXCEPTION)
+    #     result = collection.find_one(query)
+    #     if result is None:
+    #         return
+        
+    #     # update count and return
+    #     _id = result[GDTFields._SPEC_MONGODB_ID]
+    #     _count = result.get(GDTFields.DATA_COUNT, 1) + 1
+    #     collection.update_one({GDTFields._SPEC_MONGODB_ID: _id}, {"$set": {GDTFields.DATA_COUNT: _count, GDTFields.BUG_REPORT_HANDLED: False}})
+
+    def delete_data(self, Id) -> bool:
+        '''删除异常数据
+        @query: 查询条件
+        @return: 是否删除成功'''
+
+        collection = self.__database.get_collection(GDTCollections.TABLE_BUG_REPORT_EXCEPTION)
+        query = {GDTFields._SPEC_MONGODB_ID: ObjectId(Id)}
+        result = collection.delete_one(query)
+        print("delete result:", result.deleted_count)
+        return result.deleted_count > 0
+
+    def update_data_version(self, query:dict, version:str) -> None:
+        '''更新异常的版本信息
+        @query: 查询条件
+        @version: 版本信息'''
 
         collection = self.__database.get_collection(GDTCollections.TABLE_BUG_REPORT_EXCEPTION)
         result = collection.find_one(query)
         if result is None:
             return
         
-        # update count and return
+        # update version and return
         _id = result[GDTFields._SPEC_MONGODB_ID]
-        _count = result.get(GDTFields.DATA_COUNT, 1) + 1
-        collection.update_one({GDTFields._SPEC_MONGODB_ID: _id}, {"$set": {GDTFields.DATA_COUNT: _count, GDTFields.BUG_REPORT_HANDLED: False}})
+        collection.update_one({GDTFields._SPEC_MONGODB_ID: _id}, {"$set": {BugUtils.KEY_VERSION: version}})
 
     def insert_data(self, data) -> bool:
         '''插入异常信息
@@ -210,7 +264,7 @@ class GDTMongoHandleBase:
         collection = self.__database.get_collection(GDTCollections.TABLE_BUG_REPORT_EXCEPTION)
         _result = []
         for data in collection.find(query):
-            _display_data = BugUtils._get_bug_display(data)
+            _display_data = BugUtils.get_bug_session(data)
             if _display_data is not None:
                 _result.append(_display_data)
         return _result
@@ -225,17 +279,14 @@ class GDTMongoHandleBase:
         _result = []
         need_fields = {
             GDTFields._SPEC_MONGODB_ID : 1, 
-            BugUtils.KEY_NAME: 1,
-            BugUtils.KEY_MESSAGE: 1,
-            BugUtils.KEY_TRIGGER_POINTS: 1,
-            GDTFields.DATA_DATE : 1,
-            GDTFields.DATA_PLAN_ID : 1,
-            BugUtils.KEY_VERSION : 1,
-            GDTFields.BUG_REPORT_HANDLED : 1, 
-            GDTFields.DATA_COUNT : 1
+            GDTFields.BUG_SESSION_MESSAGE : 1,
+            GDTFields.BUG_SESSION_ID : 1,
+            GDTFields.BUG_SESSION_RECORDS : 1,
+            GDTFields.BUG_SESSION_REJECT_REPORT : 1,
+            GDTFields.BUG_SESSION_COUNT : 1,
         }
         for data in collection.find(query, need_fields).sort(GDTFields.DATA_TIMESTAMP, -1).skip(index * page_count).limit(page_count):
-            _display_data = BugUtils._get_bug_display(data)
+            _display_data = BugUtils.get_bug_session(data)
             if _display_data is not None:
                 _result.append(_display_data)
         return _result
@@ -246,6 +297,14 @@ class GDTMongoHandleBase:
         collection = self.__database.get_collection(GDTCollections.TABLE_BUG_REPORT_EXCEPTION)
         _query = {GDTFields._SPEC_MONGODB_ID: ObjectId(_id)}
         _result = collection.update_one(_query, {"$set": {GDTFields.BUG_REPORT_HANDLED: handled}})
+        return _result.acknowledged
+    
+    def update_bug_reject(self, _id, rejected:bool) -> bool:
+        '''更新异常的拒绝状态'''
+
+        collection = self.__database.get_collection(GDTCollections.TABLE_BUG_REPORT_EXCEPTION)
+        _query = {GDTFields._SPEC_MONGODB_ID: ObjectId(_id)}
+        _result = collection.update_one(_query, {"$set": {GDTFields.BUG_SESSION_REJECT_REPORT: rejected}})
         return _result.acknowledged
 
     def get_data(self, _id) -> bool:

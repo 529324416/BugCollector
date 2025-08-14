@@ -43,8 +43,10 @@ class GDTFields:
     BUG_SESSION_RECORDS = "records"
     BUG_SESSION_COUNT = "count"
     BUG_SESSION_MESSAGE = "message"
+    BUG_SESSION_STATUS = "status"
     BUG_SESSION_REJECT_REPORT = "reject"
     BUG_SESSION_UPDATE_TIME = "update_time"
+    BUG_SESSION_UPDATE_TIMESTAMP = "update_timestamp"  # BUG会话的更新时间戳
     BUG_SESSION_UPDATE_VERSION = "update_version"  # BUG会话的最新版本号
 
 

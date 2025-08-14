@@ -2,7 +2,6 @@ from gdt_database._cons import *
 from gdt_database._utils import *
 
 
-
 class BugUtils:
     
     '''BUG-异常结构
@@ -64,7 +63,7 @@ class BugUtils:
     KEY_HANDLED = "handled"
 
     @staticmethod
-    def get_bug_session(origin_data):
+    def get_bug_session(data):
         '''获取BUG会话的显示信息
         {...} -> {
             "id":"mongodb_id"
@@ -73,17 +72,23 @@ class BugUtils:
             "records":[],
             "reject":False,
             "count":1,
-            "update_time":"2023-10-01"
+            "update_time":"2023-10-01",
+            "update_timestamp":0000000000,
+            "version":"0.86.16",
+            "status":0
         }
         '''
 
-        _id = origin_data.get(GDTFields._SPEC_MONGODB_ID)
-        _message = origin_data.get(GDTFields.BUG_SESSION_MESSAGE, "")
-        _records = origin_data.get(GDTFields.BUG_SESSION_RECORDS, [])        
-        _reject = origin_data.get(GDTFields.BUG_SESSION_REJECT_REPORT, False)
+        _id = data.get(GDTFields._SPEC_MONGODB_ID)
+        _message = data.get(GDTFields.BUG_SESSION_MESSAGE, "")
+        _records = data.get(GDTFields.BUG_SESSION_RECORDS, [])        
+        _reject = data.get(GDTFields.BUG_SESSION_REJECT_REPORT, False)
         _count = len(_records)
-        _update_time = origin_data.get(GDTFields.BUG_SESSION_UPDATE_TIME, date_yymmdd())
-        _version = origin_data.get(GDTFields.BUG_SESSION_UPDATE_VERSION, "unknown")
+        _update_time = data.get(GDTFields.BUG_SESSION_UPDATE_TIME, "unknown")
+        _update_timestamp = data.get(GDTFields.BUG_SESSION_UPDATE_TIMESTAMP, 0)
+        _version = data.get(GDTFields.BUG_SESSION_UPDATE_VERSION, "unknown")
+        _status = data.get(GDTFields.BUG_SESSION_STATUS, 3)  # BUG会话的状态，默认为错误状态
+
 
         _trigger_points = _records[0].get(BugUtils.KEY_TRIGGER_POINTS)
         if len(_trigger_points) == 0:
@@ -92,14 +97,18 @@ class BugUtils:
             _first = _trigger_points[0]
             _except_pos = "{}({})".format(_first.get("code"), _first.get("filepath"))
 
+
         return {
             "id": _id,
             "except_info": _message,
             "except_pos": _except_pos,
             "reject": _reject,
             "count": _count,
-            "version": _version,
-            "date": _update_time
+            "update_version": _version,
+            "update_time": _update_time,
+            "update_timestamp":  _update_timestamp,
+            "date": _update_time,
+            "status": _status,  # BUG会话的状态
         }
 
     @staticmethod

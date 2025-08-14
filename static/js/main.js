@@ -172,7 +172,37 @@ function delete_bug_session(url, id)
     .then(data => {
         if(data.success)
         {
-            reload_main();
+            // redirect to main page
+            window.location.href = "/";
+        }else{
+            alert(data.message);
+        }
+    });
+}
+
+function change_bug_session_status(url, id, status)
+{
+    // DEBUG
+    console.log("Changing bug session status:", id, status);
+
+    fetch(url, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            'id': id,
+            'status': status
+        })
+    }).then(response => response.json())
+    .then(data => {
+        if(data.success)
+        {
+            // reload current  page
+            // url = "/doloctown/bug/exception/session/" + id
+            // reload current page to url
+            window.location.reload();
+            alert(data.message);
         }else{
             alert(data.message);
         }

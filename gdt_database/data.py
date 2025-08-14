@@ -2,6 +2,7 @@ from pymongo import MongoClient
 from pymongo.cursor import Cursor
 from pymongo.database import Database
 from pymongo.errors import ConnectionFailure
+from pymongo.collection import Collection
 from bson import ObjectId
 from typing import List,Tuple
 
@@ -9,6 +10,14 @@ from ._cons import *
 from ._utils import *
 from ._bug import *
 from _gdt_logger import GDTLogger
+
+class StatusCode:
+    '''状态码'''
+
+    ERROR = 0
+    WARNING = 1
+    FIXED = 2
+    UNKNOWN = 3
 
 class _GDTDataUtils:
     
@@ -198,6 +207,19 @@ class GDTMongoHandleBase:
         records.append(data)
         update_time = date_yymmdd()
         update_version = data.get(BugUtils.KEY_VERSION, "unknown")
+        update_timestamp = timestamp()
+        status = data.get(GDTFields.BUG_SESSION_STATUS, StatusCode.UNKNOWN)
+        if status == StatusCode.UNKNOWN:
+            status = StatusCode.ERROR
+
+        elif status == StatusCode.FIXED:
+            status = StatusCode.WARNING
+
+        else:
+            status = StatusCode.ERROR
+
+        # resort records
+        records.sort(key=lambda x: x.get(GDTFields.DATA_TIMESTAMP, 0), reverse=True)
 
         # ensure update target data
         _id = result[GDTFields._SPEC_MONGODB_ID]
@@ -205,10 +227,15 @@ class GDTMongoHandleBase:
         collection.update_one(query, {"$set": {
                 GDTFields.BUG_SESSION_RECORDS: records,
                 GDTFields.BUG_SESSION_UPDATE_TIME: update_time,
-                GDTFields.BUG_SESSION_UPDATE_VERSION: update_version
+                GDTFields.BUG_SESSION_UPDATE_VERSION: update_version,
+                GDTFields.BUG_SESSION_UPDATE_TIMESTAMP: update_timestamp,
+                GDTFields.BUG_SESSION_STATUS: status  # 更新BUG会话的状态
             }
         })
+
         return True
+
+
 
     # def increment_data_count(self, query:dict) -> None:
     #     '''增加异常数量并将异常改为未处理状态
@@ -284,8 +311,11 @@ class GDTMongoHandleBase:
             GDTFields.BUG_SESSION_RECORDS : 1,
             GDTFields.BUG_SESSION_REJECT_REPORT : 1,
             GDTFields.BUG_SESSION_COUNT : 1,
+            GDTFields.BUG_SESSION_UPDATE_TIME : 1,
+            GDTFields.BUG_SESSION_UPDATE_VERSION : 1,
+            GDTFields.BUG_SESSION_STATUS : 1,
         }
-        for data in collection.find(query, need_fields).sort(GDTFields.DATA_TIMESTAMP, -1).skip(index * page_count).limit(page_count):
+        for data in collection.find(query, need_fields).sort(GDTFields.BUG_SESSION_UPDATE_TIMESTAMP, -1).skip(index * page_count).limit(page_count):
             _display_data = BugUtils.get_bug_session(data)
             if _display_data is not None:
                 _result.append(_display_data)
@@ -306,6 +336,16 @@ class GDTMongoHandleBase:
         _query = {GDTFields._SPEC_MONGODB_ID: ObjectId(_id)}
         _result = collection.update_one(_query, {"$set": {GDTFields.BUG_SESSION_REJECT_REPORT: rejected}})
         return _result.acknowledged
+    
+    def update_bug_session_status(self, _id, status:int) -> bool:
+        '''更新BUG会话的状态
+        @query: 查询条件
+        @status: 状态码'''
+
+        collection = self.__database.get_collection(GDTCollections.TABLE_BUG_REPORT_EXCEPTION)
+        _query = {GDTFields._SPEC_MONGODB_ID: ObjectId(_id)}
+        result = collection.update_one(_query, {"$set": {GDTFields.BUG_SESSION_STATUS: status}})
+        return result.acknowledged
 
     def get_data(self, _id) -> bool:
         '''获取异常信息'''
